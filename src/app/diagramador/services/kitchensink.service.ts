@@ -640,6 +640,25 @@ public class ${elementoClase.titulo} implements Serializable {
               continue;
             }
 
+            if (
+              elementoLink.origen.id == elementoClase.id &&
+              elementoLink.destino.id == elementoClase.id
+            ) {
+              jpaClase += `
+                @ManyToOne
+                @JoinColumn(name = "id_padre_${elementoClase.titulo.toLowerCase()}")
+                private ${
+                  elementoClase.titulo
+                } ${elementoClase.titulo.toLowerCase()}Padre;
+
+                @OneToMany(mappedBy = "${elementoClase.titulo.toLowerCase()}Padre", cascade = CascadeType.ALL)
+                private List<${elementoClase.titulo}> sub${pluralize(
+                elementoClase.titulo.toLowerCase()
+              )};
+              `;
+              continue;
+            }
+
             //LOGIC : Verificar que tenga solo un atributo
             // if (
             //   elementoLink.atributos.length == 1 &&

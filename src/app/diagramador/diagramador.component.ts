@@ -73,8 +73,6 @@ export default class DiagramadorComponent
       .subscribe({
         next: (respuesta: any) => {
           try {
-            console.log(respuesta);
-            // this.diagramadorService.
             if (respuesta.diagrama == '') {
               this.rappid.graph.fromJSON(
                 JSON.parse(sampleGraphs.emergencyProcedure)
@@ -87,7 +85,6 @@ export default class DiagramadorComponent
           }
         },
         error: (error) => {
-          // Manejo de errores del observable
           console.error('Error en la suscripción:', error);
         },
         complete: () => {

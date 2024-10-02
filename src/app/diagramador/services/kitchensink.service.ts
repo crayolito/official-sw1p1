@@ -1403,10 +1403,12 @@ El proyecto se ejecutará en el puerto 8081, como se especifica en el archivo \`
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import com.nombreproyecto.proyecto.modelos.${nombreClase};
 import com.nombreproyecto.proyecto.repositorios.${nombreClase}Repositorio;
 
 import java.util.List;
+import java.util.Optional;
 
 @Service
 public class ${nombreClase}Servicio {
@@ -1422,16 +1424,24 @@ public class ${nombreClase}Servicio {
         return repositorio.findById(id).orElse(null);
     }
 
+    @Transactional
     public String guardar(${nombreClase} ${nombreClase.toLowerCase()}) {
-        repositorio.save(${nombreClase.toLowerCase()});
-        return "${nombreClase} guardado con éxito.";
+        try {
+            repositorio.save(${nombreClase.toLowerCase()});
+            return "${nombreClase} guardado con éxito.";
+        } catch (Exception e) {
+            // Manejar la excepción y retornar un mensaje de error
+            return "Error al guardar ${nombreClase}: " + e.getMessage();
+        }
     }
 
+    @Transactional
     public String actualizar(Long id, ${nombreClase} ${nombreClase.toLowerCase()}) {
         if (repositorio.existsById(id)) {
-            ${nombreClase} objetoExistente = repositorio.findById(id).orElse(null);
+            Optional<${nombreClase}> optionalObjetoExistente = repositorio.findById(id);
 
-            if (objetoExistente != null) {
+            if (optionalObjetoExistente.isPresent()) {
+                ${nombreClase} objetoExistente = optionalObjetoExistente.get();
                 // Actualizar atributos simples
                 ${simples
                   .map(
@@ -1469,10 +1479,16 @@ public class ${nombreClase}Servicio {
         }
     }
 
+    @Transactional
     public String eliminar(Long id) {
         if (repositorio.existsById(id)) {
-            repositorio.deleteById(id);
-            return "${nombreClase} eliminado con éxito.";
+            try {
+                repositorio.deleteById(id);
+                return "${nombreClase} eliminado con éxito.";
+            } catch (Exception e) {
+                // Manejar la excepción y retornar un mensaje de error
+                return "Error al eliminar ${nombreClase}: " + e.getMessage();
+            }
         } else {
             return "${nombreClase} no encontrado.";
         }

@@ -1351,8 +1351,19 @@ El proyecto se ejecutará en el puerto 8081, como se especifica en el archivo \`
       // Expresión regular para detectar relaciones ManyToOne
       const regexManyToOne =
         /@ManyToOne\s*\(\s*.*?\)\s*private\s+\w+\s+(\w+);/g;
+      let matchManyToOne;
 
       const lines = jpaClass.split('\n');
+
+      // Iterar sobre todas las coincidencias
+      while ((matchManyToOne = regexManyToOne.exec(jpaClass)) !== null) {
+        // Capitalizar la primera letra del nombre de la propiedad
+        const capitalizedProperty =
+          matchManyToOne[1].charAt(0).toUpperCase() +
+          matchManyToOne[1].slice(1);
+        // Agregar el nombre capitalizado a la lista
+        manyToOne.push(capitalizedProperty);
+      }
 
       for (let line of lines) {
         line = line.trim();
@@ -1397,13 +1408,13 @@ El proyecto se ejecutará en el puerto 8081, como se especifica en el archivo \`
         }
 
         // Detectar relaciones ManyToOne usando la expresión regular
-        const manyToOneMatch = regexManyToOne.exec(line);
-        if (manyToOneMatch) {
-          const nombre = manyToOneMatch[1];
-          const nombreFormateado =
-            nombre.charAt(0).toUpperCase() + nombre.slice(1);
-          manyToOne.push(nombreFormateado);
-        }
+        // const manyToOneMatch = regexManyToOne.exec(line);
+        // if (manyToOneMatch) {
+        //   const nombre = manyToOneMatch[1];
+        //   const nombreFormateado =
+        //     nombre.charAt(0).toUpperCase() + nombre.slice(1);
+        //   manyToOne.push(nombreFormateado);
+        // }
 
         // Detectar relaciones OneToOne
         if (line.includes('@OneToOne')) {

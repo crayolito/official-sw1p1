@@ -830,7 +830,7 @@ El proyecto se ejecutará en el puerto 8081, como se especifica en el archivo \`
           // Generar servicio
           carpetaServicios!.file(
             nombreClase + 'Servicio.java',
-            this.generarServicio(nombreClase)
+            this.generarServicio(nombreClase,claseJPA)
           );
 
           // Generar controlador
@@ -1349,57 +1349,133 @@ El proyecto se ejecutará en el puerto 8081, como se especifica en el archivo \`
   }
 
   // Generar servicio
-  generarServicio(nombreClase: string): string {
-    return `package com.nombreproyecto.proyecto.servicios;
+  generarServicio(nombreClase: string, jpaClass: string): string {
+    const parsearAtributos = (jpaClass: string) => {
+      const simples: string[] = [];
+      const manyToMany: string[] = [];
+      const manyToOne: string[] = [];
+      const oneToOne: string[] = [];
+      const lines = jpaClass.split('\n');
 
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.stereotype.Service;
-import com.nombreproyecto.proyecto.modelos.${nombreClase};
-import com.nombreproyecto.proyecto.repositorios.${nombreClase}Repositorio;
+      for (let line of lines) {
+        line = line.trim();
 
-import java.util.List;
+        // Detectar atributos simples
+        if (
+          line.startsWith('private') &&
+          (line.includes('String') ||
+            line.includes('Long') ||
+            line.includes('int') ||
+            line.includes('boolean'))
+        ) {
+          const parts = line.split(' ');
+          const nombre = parts[2].replace(';', '');
+          simples.push(nombre);
+        }
 
-@Service
-public class ${nombreClase}Servicio {
+        // Detectar relaciones ManyToMany
+        if (line.includes('@ManyToMany')) {
+          const parts = line.split(' ');
+          const nombre =
+            parts
+              .find((part) => part.includes('List<'))
+              ?.replace('List<', '')
+              .replace('>', '')
+              .replace(';', '') || '';
+          manyToMany.push(nombre);
+        }
 
-  @Autowired
-  private ${nombreClase}Repositorio repositorio;
+        // Detectar relaciones ManyToOne
+        if (line.includes('@ManyToOne')) {
+          const parts = line.split(' ');
+          const nombre =
+            parts
+              .find((part) => part.includes('List<'))
+              ?.replace('List<', '')
+              .replace('>', '')
+              .replace(';', '') || '';
+          manyToOne.push(nombre);
+        }
 
-  public List<${nombreClase}> listar() {
-      return repositorio.findAll();
-  }
-
-  public ${nombreClase} obtenerPorId(Long id) {
-      return repositorio.findById(id).orElse(null);
-  }
-
-  public String guardar(${nombreClase} ${nombreClase.toLowerCase()}) {
-      repositorio.save(${nombreClase.toLowerCase()});
-      return "${nombreClase} guardado con éxito.";
-  }
-
-  public String actualizar(Long id, ${nombreClase} ${nombreClase.toLowerCase()}) {
-      if (repositorio.existsById(id)) {
-          ${nombreClase} objetoExistente = repositorio.findById(id).orElse(null);
-          // Aquí podrías copiar los valores del objeto existente al nuevo objeto
-          // por ejemplo: objetoExistente.setDescripcion(${nombreClase.toLowerCase()}.getDescripcion());
-          repositorio.save(objetoExistente);
-          return "${nombreClase} actualizado con éxito.";
-      } else {
-          return "${nombreClase} no encontrado.";
+        // Detectar relaciones OneToOne
+        if (line.includes('@OneToOne')) {
+          const parts = line.split(' ');
+          const nombre =
+            parts
+              .find((part) => part.includes('List<'))
+              ?.replace('List<', '')
+              .replace('>', '')
+              .replace(';', '') || '';
+          oneToOne.push(nombre);
+        }
       }
-  }
 
-  public String eliminar(Long id) {
-      if (repositorio.existsById(id)) {
-          repositorio.deleteById(id);
-          return "${nombreClase} eliminado con éxito.";
-      } else {
-          return "${nombreClase} no encontrado.";
+      return { simples, manyToMany, manyToOne, oneToOne };
+    };
+
+    const { simples, manyToMany, manyToOne, oneToOne } =
+      parsearAtributos(jpaClass);
+
+      return `package com.nombreproyecto.proyecto.servicios;
+
+      import org.springframework.beans.factory.annotation.Autowired;
+      import org.springframework.stereotype.Service;
+      import com.nombreproyecto.proyecto.modelos.${nombreClase};
+      import com.nombreproyecto.proyecto.repositorios.${nombreClase}Repositorio;
+
+      import java.util.List;
+
+      @Service
+      public class ${nombreClase}Servicio {
+
+          @Autowired
+          private ${nombreClase}Repositorio repositorio;
+
+          public List<${nombreClase}> listar() {
+              return repositorio.findAll();
+          }
+
+          public ${nombreClase} obtenerPorId(Long id) {
+              return repositorio.findById(id).orElse(null);
+          }
+
+          public String guardar(${nombreClase} ${nombreClase.toLowerCase()}) {
+              repositorio.save(${nombreClase.toLowerCase()});
+              return "${nombreClase} guardado con éxito.";
+          }
+
+          public String actualizar(Long id, ${nombreClase} ${nombreClase.toLowerCase()}) {
+              if (repositorio.existsById(id)) {
+                  ${nombreClase} objetoExistente = repositorio.findById(id).orElse(null);
+                  // Actualizar atributos simples
+                  ${simples.map(attr => `objetoExistente.set${attr.charAt(0).toUpperCase() + attr.slice(1)}(${nombreClase.toLowerCase()}.get${attr.charAt(0).toUpperCase() + attr.slice(1)}());`).join('\n            ')}
+
+                  // Actualizar relaciones ManyToMany
+                  ${manyToMany.map(attr => `objetoExistente.set${attr.charAt(0).toUpperCase() + attr.slice(1)}(${nombreClase.toLowerCase()}.get${attr.charAt(0).toUpperCase() + attr.slice(1)}());`).join('\n            ')}
+
+                  // Actualizar relaciones ManyToOne
+                  ${manyToOne.map(attr => `objetoExistente.set${attr.charAt(0).toUpperCase() + attr.slice(1)}(${nombreClase.toLowerCase()}.get${attr.charAt(0).toUpperCase() + attr.slice(1)}());`).join('\n            ')}
+
+                  // Actualizar relaciones OneToOne
+                  ${oneToOne.map(attr => `objetoExistente.set${attr.charAt(0).toUpperCase() + attr.slice(1)}(${nombreClase.toLowerCase()}.get${attr.charAt(0).toUpperCase() + attr.slice(1)}());`).join('\n            ')}
+
+                  repositorio.save(objetoExistente);
+                  return "${nombreClase} actualizado con éxito.";
+              } else {
+                  return "${nombreClase} no encontrado.";
+              }
+          }
+
+          public String eliminar(Long id) {
+              if (repositorio.existsById(id)) {
+                  repositorio.deleteById(id);
+                  return "${nombreClase} eliminado con éxito.";
+              } else {
+                  return "${nombreClase} no encontrado.";
+              }
+          }
       }
-  }
-}
-`;
+      `;
   }
 
   // Generar controlador

@@ -1348,7 +1348,6 @@ El proyecto se ejecutará en el puerto 8081, como se especifica en el archivo \`
     this.renderPlugin('.toolbar-container', this.toolbarService.toolbar);
   }
 
-  // Generar servicio
   generarServicio(nombreClase: string, jpaClass: string): string {
     const parsearAtributos = (jpaClass: string) => {
       const simples: string[] = [];

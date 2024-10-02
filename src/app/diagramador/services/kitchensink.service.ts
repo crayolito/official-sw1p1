@@ -1366,8 +1366,8 @@ El proyecto se ejecutará en el puerto 8081, como se especifica en el archivo \`
           (line.includes('String') ||
             line.includes('Long') ||
             line.includes('int') ||
-            line.includes('boolean'),
-          line.includes('LocalDate') ||
+            line.includes('boolean') ||
+            line.includes('LocalDate') ||
             line.includes('BigDecimal') ||
             line.includes('Date') ||
             line.includes('Time') ||
@@ -1425,36 +1425,37 @@ El proyecto se ejecutará en el puerto 8081, como se especifica en el archivo \`
 
     return `package com.nombreproyecto.proyecto.servicios;
 
-      import org.springframework.beans.factory.annotation.Autowired;
-      import org.springframework.stereotype.Service;
-      import com.nombreproyecto.proyecto.modelos.${nombreClase};
-      import com.nombreproyecto.proyecto.repositorios.${nombreClase}Repositorio;
+  import org.springframework.beans.factory.annotation.Autowired;
+  import org.springframework.stereotype.Service;
+  import com.nombreproyecto.proyecto.modelos.${nombreClase};
+  import com.nombreproyecto.proyecto.repositorios.${nombreClase}Repositorio;
 
-      import java.util.List;
+  import java.util.List;
 
-      @Service
-      public class ${nombreClase}Servicio {
+  @Service
+  public class ${nombreClase}Servicio {
 
-          @Autowired
-          private ${nombreClase}Repositorio repositorio;
+      @Autowired
+      private ${nombreClase}Repositorio repositorio;
 
-          public List<${nombreClase}> listar() {
-              return repositorio.findAll();
-          }
+      public List<${nombreClase}> listar() {
+          return repositorio.findAll();
+      }
 
-          public ${nombreClase} obtenerPorId(Long id) {
-              return repositorio.findById(id).orElse(null);
-          }
+      public ${nombreClase} obtenerPorId(Long id) {
+          return repositorio.findById(id).orElse(null);
+      }
 
-          public String guardar(${nombreClase} ${nombreClase.toLowerCase()}) {
-              repositorio.save(${nombreClase.toLowerCase()});
-              return "${nombreClase} guardado con éxito.";
-          }
+      public String guardar(${nombreClase} ${nombreClase.toLowerCase()}) {
+          repositorio.save(${nombreClase.toLowerCase()});
+          return "${nombreClase} guardado con éxito.";
+      }
 
-          public String actualizar(Long id, ${nombreClase} ${nombreClase.toLowerCase()}) {
-              if (repositorio.existsById(id)) {
-                  ${nombreClase} objetoExistente = repositorio.findById(id).orElse(null);
+      public String actualizar(Long id, ${nombreClase} ${nombreClase.toLowerCase()}) {
+          if (repositorio.existsById(id)) {
+              ${nombreClase} objetoExistente = repositorio.findById(id).orElse(null);
 
+              if (objetoExistente != null) {
                   // Actualizar atributos simples
                   ${simples
                     .map(
@@ -1465,7 +1466,7 @@ El proyecto se ejecutará en el puerto 8081, como se especifica en el archivo \`
                           attr.charAt(0).toUpperCase() + attr.slice(1)
                         }());`
                     )
-                    .join('\n            ')}
+                    .join('\n                ')}
 
                   // Actualizar relaciones ManyToOne
                   ${manyToOne
@@ -1477,7 +1478,7 @@ El proyecto se ejecutará en el puerto 8081, como se especifica en el archivo \`
                           attr.charAt(0).toUpperCase() + attr.slice(1)
                         }());`
                     )
-                    .join('\n            ')}
+                    .join('\n                ')}
 
                   // Actualizar relaciones OneToOne
                   ${oneToOne
@@ -1489,7 +1490,7 @@ El proyecto se ejecutará en el puerto 8081, como se especifica en el archivo \`
                           attr.charAt(0).toUpperCase() + attr.slice(1)
                         }());`
                     )
-                    .join('\n            ')}
+                    .join('\n                ')}
 
                   // Actualizar relaciones ManyToMany
                   ${manyToMany
@@ -1501,25 +1502,28 @@ El proyecto se ejecutará en el puerto 8081, como se especifica en el archivo \`
                           attr.charAt(0).toUpperCase() + attr.slice(1)
                         }());`
                     )
-                    .join('\n            ')}
+                    .join('\n                ')}
 
                   repositorio.save(objetoExistente);
                   return "${nombreClase} actualizado con éxito.";
               } else {
                   return "${nombreClase} no encontrado.";
               }
-          }
-
-          public String eliminar(Long id) {
-              if (repositorio.existsById(id)) {
-                  repositorio.deleteById(id);
-                  return "${nombreClase} eliminado con éxito.";
-              } else {
-                  return "${nombreClase} no encontrado.";
-              }
+          } else {
+              return "${nombreClase} no encontrado.";
           }
       }
-      `;
+
+      public String eliminar(Long id) {
+          if (repositorio.existsById(id)) {
+              repositorio.deleteById(id);
+              return "${nombreClase} eliminado con éxito.";
+          } else {
+              return "${nombreClase} no encontrado.";
+          }
+      }
+  }
+  `;
   }
 
   // Generar controlador

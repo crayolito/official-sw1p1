@@ -1347,11 +1347,17 @@ El proyecto se ejecutará en el puerto 8081, como se especifica en el archivo \`
       const manyToOne: string[] = [];
       const oneToOne: string[] = [];
       const oneToMany: string[] = [];
+
+      // Expresión regular para detectar relaciones ManyToOne
+      const regexManyToOne =
+        /@ManyToOne\s*\(\s*.*?\)\s*private\s+\w+\s+(\w+);/g;
+
       const lines = jpaClass.split('\n');
 
       for (let line of lines) {
         line = line.trim();
 
+        // Detectar atributos simples
         if (
           line.startsWith('private') &&
           !line.includes('id') && // Excluir el atributo id
@@ -1371,7 +1377,7 @@ El proyecto se ejecutará en el puerto 8081, como se especifica en el archivo \`
         ) {
           const parts = line.split(' ');
           const nombre = parts[2].replace(';', '');
-          simples.push(nombre);
+          simples.push(nombre.charAt(0).toUpperCase() + nombre.slice(1));
         }
 
         // Detectar relaciones ManyToMany
@@ -1390,19 +1396,13 @@ El proyecto se ejecutará en el puerto 8081, como se especifica en el archivo \`
           }
         }
 
-        // Detectar relaciones ManyToOne
-        if (line.includes('@ManyToOne')) {
-          const parts = line.split(' ');
-          const nombre =
-            parts
-              .find((part) => part.includes('private'))
-              ?.split(' ')[2]
-              .replace(';', '') || '';
-          if (nombre) {
-            const nombreFormateado =
-              nombre.charAt(0).toUpperCase() + nombre.slice(1);
-            manyToOne.push(nombreFormateado);
-          }
+        // Detectar relaciones ManyToOne usando la expresión regular
+        const manyToOneMatch = regexManyToOne.exec(line);
+        if (manyToOneMatch) {
+          const nombre = manyToOneMatch[1];
+          const nombreFormateado =
+            nombre.charAt(0).toUpperCase() + nombre.slice(1);
+          manyToOne.push(nombreFormateado);
         }
 
         // Detectar relaciones OneToOne

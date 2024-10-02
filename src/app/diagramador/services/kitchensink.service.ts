@@ -1346,6 +1346,7 @@ El proyecto se ejecutará en el puerto 8081, como se especifica en el archivo \`
       const manyToMany: string[] = [];
       const manyToOne: string[] = [];
       const oneToOne: string[] = [];
+      const oneToMany: string[] = [];
       const lines = jpaClass.split('\n');
 
       for (let line of lines) {
@@ -1353,6 +1354,7 @@ El proyecto se ejecutará en el puerto 8081, como se especifica en el archivo \`
 
         if (
           line.startsWith('private') &&
+          !line.includes('id') && // Excluir el atributo id
           (line.includes('String') ||
             line.includes('Long') ||
             line.includes('int') ||
@@ -1381,7 +1383,11 @@ El proyecto se ejecutará en el puerto 8081, como se especifica en el archivo \`
               ?.replace('List<', '')
               .replace('>', '')
               .replace(';', '') || '';
-          manyToMany.push(nombre);
+          if (nombre) {
+            const nombreFormateado =
+              nombre.charAt(0).toUpperCase() + nombre.slice(1);
+            manyToMany.push(nombreFormateado);
+          }
         }
 
         // Detectar relaciones ManyToOne
@@ -1392,7 +1398,11 @@ El proyecto se ejecutará en el puerto 8081, como se especifica en el archivo \`
               .find((part) => part.includes('private'))
               ?.split(' ')[2]
               .replace(';', '') || '';
-          manyToOne.push(nombre);
+          if (nombre) {
+            const nombreFormateado =
+              nombre.charAt(0).toUpperCase() + nombre.slice(1);
+            manyToOne.push(nombreFormateado);
+          }
         }
 
         // Detectar relaciones OneToOne
@@ -1403,14 +1413,34 @@ El proyecto se ejecutará en el puerto 8081, como se especifica en el archivo \`
               .find((part) => part.includes('private'))
               ?.split(' ')[2]
               .replace(';', '') || '';
-          oneToOne.push(nombre);
+          if (nombre) {
+            const nombreFormateado =
+              nombre.charAt(0).toUpperCase() + nombre.slice(1);
+            oneToOne.push(nombreFormateado);
+          }
+        }
+
+        // Detectar relaciones OneToMany
+        if (line.includes('@OneToMany')) {
+          const parts = line.split(' ');
+          const nombre =
+            parts
+              .find((part) => part.includes('List<'))
+              ?.replace('List<', '')
+              .replace('>', '')
+              .replace(';', '') || '';
+          if (nombre) {
+            const nombreFormateado =
+              nombre.charAt(0).toUpperCase() + nombre.slice(1);
+            oneToMany.push(nombreFormateado);
+          }
         }
       }
 
-      return { simples, manyToMany, manyToOne, oneToOne };
+      return { simples, manyToMany, manyToOne, oneToOne, oneToMany };
     };
 
-    const { simples, manyToMany, manyToOne, oneToOne } =
+    const { simples, manyToMany, manyToOne, oneToOne, oneToMany } =
       parsearAtributos(jpaClass);
 
     return `package com.nombreproyecto.proyecto.servicios;

@@ -1347,7 +1347,7 @@ El proyecto se ejecutará en el puerto 8081, como se especifica en el archivo \`
       const manyToOne: string[] = [];
       const oneToOne: string[] = [];
       const oneToMany: string[] = [];
-
+      const lines = jpaClass.split('\n');
       // Expresión regular mejorada para detectar relaciones ManyToOne
       const regexManyToOne =
         /@ManyToOne\s*\(\s*.*?\)\s*private\s+\w+\s+(\w+)\s*;/g;

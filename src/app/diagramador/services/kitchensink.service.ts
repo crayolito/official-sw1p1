@@ -1359,7 +1359,6 @@ El proyecto se ejecutará en el puerto 8081, como se especifica en el archivo \`
       for (let line of lines) {
         line = line.trim();
 
-        // Detectar atributos simples
         if (
           line.startsWith('private') &&
           (line.includes('String') ||

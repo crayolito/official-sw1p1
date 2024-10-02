@@ -1348,12 +1348,11 @@ El proyecto se ejecutará en el puerto 8081, como se especifica en el archivo \`
       const oneToOne: string[] = [];
       const oneToMany: string[] = [];
 
-      // Expresión regular para detectar relaciones ManyToOne
+      // Expresión regular mejorada para detectar relaciones ManyToOne
       const regexManyToOne =
-        /@ManyToOne\s*\(\s*.*?\)\s*private\s+\w+\s+(\w+);/g;
-      let matchManyToOne;
+        /@ManyToOne\s*\(\s*.*?\)\s*private\s+\w+\s+(\w+)\s*;/g;
 
-      const lines = jpaClass.split('\n');
+      let matchManyToOne;
 
       // Iterar sobre todas las coincidencias
       while ((matchManyToOne = regexManyToOne.exec(jpaClass)) !== null) {
@@ -1364,6 +1363,9 @@ El proyecto se ejecutará en el puerto 8081, como se especifica en el archivo \`
         // Agregar el nombre capitalizado a la lista
         manyToOne.push(capitalizedProperty);
       }
+
+      // Imprimir el resultado
+      console.log(manyToOne);
 
       for (let line of lines) {
         line = line.trim();

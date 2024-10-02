@@ -23,7 +23,7 @@ export interface ElementoCabezera {
   // LOGIC : ASOCIACION = 'M 0 0 0 0'
   // LOGIC : COMPOSICION = 'M -10 0 0 10 10 0 0 -10 z'
   // LOGIC : AGREGACION = 'M 0 -10 15 0 0 10 z'
-  // LOGIC : GENERALIZACION = 'M 0 -10 -15 0 0 10 z'
+  // LOGIC : Herencia = 'M 0 -10 -15 0 0 10 z'
   tipo: string;
   normal: string;
 }

@@ -461,7 +461,7 @@ class KitchenSinkService {
       case 'M 0 -10 15 0 0 10 z':
         return 'AGREGACION';
       case 'M 0 -10 -15 0 0 10 z':
-        return 'GENERALIZACION';
+        return 'HERENCIA';
       default:
         return 'ASOCIACION';
     }
@@ -1069,7 +1069,7 @@ El proyecto se ejecutará en el puerto 8081, como se especifica en el archivo \`
               });
             }
 
-            if (elementoLink.destino.normal == 'GENERALIZACION') {
+            if (elementoLink.destino.normal == 'HERENCIA') {
               connectors += `
               <connector xmi:idref="${elementoLink.id}">
                 <source xmi:idref="${elementoLink.origen.id}">

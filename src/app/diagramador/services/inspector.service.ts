@@ -156,7 +156,41 @@ export class InspectorService {
         { value: 'M 0 0 0 0', content: 'Asociacion' },
         { value: 'M -10 0 0 10 10 0 0 -10 z', content: 'Composicion' },
         { value: 'M 0 -10 15 0 0 10 z', content: 'Agregacion' },
-        { value: 'M 0 -10 -15 0 0 10 z', content: 'Generalizacion' },
+        { value: 'M 0 -10 -15 0 0 10 z', content: 'Herencia' },
+        {
+          value: 'M 0 0 m -10, 0 a 10,10 0 1,0 20,0 a 10,10 0 1,0 -20,0',
+          content: 'Dependencia',
+        },
+        {
+          value: 'M 0 0 m -10, 0 a 10,10 0 1,0 20,0 a 10,10 0 1,0 -20,0',
+          content: 'Círculo',
+        },
+        {
+          value: 'M -10 -5 H 10 V 5 H -10 Z',
+          content: 'Rectángulo',
+        },
+        {
+          value: 'M 0 -10 L 10 10 L -10 10 Z',
+          content: 'Triángulo',
+        },
+        {
+          value:
+            'M 0 -10 L 9.51 -3.09 L 5.88 8.09 L -5.88 8.09 L -9.51 -3.09 Z',
+          content: 'Pentágono',
+        },
+        {
+          value: 'M 0 -10 L 8.66 -5 L 8.66 5 L 0 10 L -8.66 5 L -8.66 -5 Z',
+          content: 'Hexágono',
+        },
+        {
+          value:
+            'M 0 -10 L 2.94 -3.09 L 9.51 -3.09 L 4.29 1.18 L 6.18 8.09 L 0 5 L -6.18 8.09 L -4.29 1.18 L -9.51 -3.09 L -2.94 -3.09 Z',
+          content: 'Estrella',
+        },
+        {
+          value: 'M 0 -10 L 10 0 L 0 10 L -10 0 Z',
+          content: 'Rombo',
+        },
       ],
       strokeWidth: [
         {

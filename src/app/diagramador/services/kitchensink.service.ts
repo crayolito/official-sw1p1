@@ -24,7 +24,7 @@ import {
   ElementoClase,
   ElementoLink,
 } from '../interfaces/jsonJoint.interface';
-import { AtributosSB } from '../interfaces/springBoot';
+import { AtributosSB, ClassJPA } from '../interfaces/springBoot';
 import * as appShapes from '../shapes/app-shapes';
 import { HaloService } from './halo.service';
 import { InspectorService } from './inspector.service';
@@ -595,9 +595,10 @@ class KitchenSinkService {
         });
 
         // READ : PAQUETES CLASES JPA
-        let clasesJPA: string[] = [];
+        let clasesJPA: ClassJPA[] = [];
 
         elementosClases.forEach((elementoClase) => {
+          let atributosEspeciales: string[] = [];
           if (elementoClase.color == '#feb663') {
             return;
           }
@@ -693,11 +694,22 @@ inverseJoinColumns = @JoinColumn(name = "id_${claseF.titulo.toLowerCase()}")
 )
 private List<${claseF.titulo}> ${pluralize(claseF.titulo.toLowerCase())};
                 `;
+                atributosEspeciales.push(
+                  this.capitalizeFirstLetter(
+                    pluralize(claseF.titulo.toLowerCase())
+                  )
+                );
               } else {
                 jpaClase += `
 @ManyToMany(mappedBy = "${pluralize(claseOxClaseI[0].titulo.toLowerCase())}")
 private List<${claseF.titulo}> ${pluralize(claseF.titulo.toLowerCase())};
                 `;
+
+                atributosEspeciales.push(
+                  this.capitalizeFirstLetter(
+                    pluralize(claseF.titulo.toLowerCase())
+                  )
+                );
               }
             } else {
               // LOGIC : Verificar si tiene dos atributos
@@ -711,13 +723,16 @@ private List<${claseF.titulo}> ${pluralize(claseF.titulo.toLowerCase())};
                   elementosClases
                 );
                 // LOGIC : HACER RELACION DE CLASES A JPA
-                const [relacionesJPA, bans] = this.relacionesClaseJPA(
-                  elementoClase,
-                  elementoLink,
-                  claseTrabajo,
-                  'origen',
-                  bansClassOneToOne
-                );
+                const [relacionesJPA, bans, attrEspeciales] =
+                  this.relacionesClaseJPA(
+                    elementoClase,
+                    elementoLink,
+                    claseTrabajo,
+                    'origen',
+                    bansClassOneToOne,
+                    atributosEspeciales
+                  );
+                atributosEspeciales = attrEspeciales;
                 relacionesClaseJPA = relacionesJPA;
                 bansClassOneToOne = bans;
                 jpaClase += relacionesClaseJPA;
@@ -728,20 +743,27 @@ private List<${claseF.titulo}> ${pluralize(claseF.titulo.toLowerCase())};
                   elementoLink,
                   elementosClases
                 );
-                const [relacionesJPA, bans] = this.relacionesClaseJPA(
-                  elementoClase,
-                  elementoLink,
-                  claseTrabajo,
-                  'destino',
-                  bansClassOneToOne
-                );
+                const [relacionesJPA, bans, attrEspeciales] =
+                  this.relacionesClaseJPA(
+                    elementoClase,
+                    elementoLink,
+                    claseTrabajo,
+                    'destino',
+                    bansClassOneToOne,
+                    atributosEspeciales
+                  );
+                atributosEspeciales = attrEspeciales;
                 relacionesClaseJPA = relacionesJPA;
                 bansClassOneToOne = bans;
                 jpaClase += relacionesClaseJPA;
               }
             }
           }
-          clasesJPA.push(jpaClase + '\n}');
+          // clasesJPA.push(jpaClase + '\n}');
+          clasesJPA.push({
+            contenido: jpaClase + '\n}',
+            attrsEspeciales: atributosEspeciales,
+          });
         });
 
         // READ : PAQUETES REPOSITORIOS
@@ -807,11 +829,11 @@ El proyecto se ejecutará en el puerto 8081, como se especifica en el archivo \`
         zip.file('README.md', contenidoREADME);
 
         clasesJPA.forEach((claseJPA) => {
-          const nombreClase = this.extraerNombreClase(claseJPA);
+          const nombreClase = this.extraerNombreClase(claseJPA.contenido);
           const nombreArchivo = nombreClase + '.java';
 
           // Generar modelo
-          carpetaModelos!.file(nombreArchivo, claseJPA);
+          carpetaModelos!.file(nombreArchivo, claseJPA.contenido);
 
           // Generar repositorio
           carpetaRepositorios!.file(
@@ -1340,28 +1362,10 @@ El proyecto se ejecutará en el puerto 8081, como se especifica en el archivo \`
     this.renderPlugin('.toolbar-container', this.toolbarService.toolbar);
   }
 
-  generarServicio(nombreClase: string, jpaClass: string): string {
+  generarServicio(nombreClase: string, jpaClass: ClassJPA): string {
     const parsearAtributos = (jpaClass: string) => {
       const simples: string[] = [];
-      const manyToMany: string[] = [];
-      const manyToOne: string[] = [];
-      const oneToOne: string[] = [];
-      const oneToMany: string[] = [];
       const lines = jpaClass.split('\n');
-      // Expresión regular mejorada para detectar relaciones ManyToOne
-      const regexManyToOne =
-        /@ManyToOne\s*(?:\([^)]*\))?\s*private\s+\w+\s+(\w+)\s*;/g;
-
-      let match;
-
-      // Iterar sobre todas las coincidencias para ManyToOne
-      while ((match = regexManyToOne.exec(jpaClass)) !== null) {
-        const capitalizedProperty =
-          match[1].charAt(0).toUpperCase() + match[1].slice(1);
-        manyToOne.push(capitalizedProperty);
-      }
-      // Imprimir el resultado
-      console.log(manyToOne);
 
       for (let line of lines) {
         line = line.trim();
@@ -1388,69 +1392,12 @@ El proyecto se ejecutará en el puerto 8081, como se especifica en el archivo \`
           const nombre = parts[2].replace(';', '');
           simples.push(nombre.charAt(0).toUpperCase() + nombre.slice(1));
         }
-
-        // Detectar relaciones ManyToMany
-        if (line.includes('@ManyToMany')) {
-          const parts = line.split(' ');
-          const nombre =
-            parts
-              .find((part) => part.includes('List<'))
-              ?.replace('List<', '')
-              .replace('>', '')
-              .replace(';', '') || '';
-          if (nombre) {
-            const nombreFormateado =
-              nombre.charAt(0).toUpperCase() + nombre.slice(1);
-            manyToMany.push(nombreFormateado);
-          }
-        }
-
-        // Detectar relaciones ManyToOne usando la expresión regular
-        // const manyToOneMatch = regexManyToOne.exec(line);
-        // if (manyToOneMatch) {
-        //   const nombre = manyToOneMatch[1];
-        //   const nombreFormateado =
-        //     nombre.charAt(0).toUpperCase() + nombre.slice(1);
-        //   manyToOne.push(nombreFormateado);
-        // }
-
-        // Detectar relaciones OneToOne
-        if (line.includes('@OneToOne')) {
-          const parts = line.split(' ');
-          const nombre =
-            parts
-              .find((part) => part.includes('private'))
-              ?.split(' ')[2]
-              .replace(';', '') || '';
-          if (nombre) {
-            const nombreFormateado =
-              nombre.charAt(0).toUpperCase() + nombre.slice(1);
-            oneToOne.push(nombreFormateado);
-          }
-        }
-
-        // Detectar relaciones OneToMany
-        if (line.includes('@OneToMany')) {
-          const parts = line.split(' ');
-          const nombre =
-            parts
-              .find((part) => part.includes('List<'))
-              ?.replace('List<', '')
-              .replace('>', '')
-              .replace(';', '') || '';
-          if (nombre) {
-            const nombreFormateado =
-              nombre.charAt(0).toUpperCase() + nombre.slice(1);
-            oneToMany.push(nombreFormateado);
-          }
-        }
       }
 
-      return { simples, manyToMany, manyToOne, oneToOne, oneToMany };
+      return { simples };
     };
 
-    const { simples, manyToMany, manyToOne, oneToOne, oneToMany } =
-      parsearAtributos(jpaClass);
+    const { simples } = parsearAtributos(jpaClass.contenido);
 
     return `package com.nombreproyecto.proyecto.servicios;
 
@@ -1498,31 +1445,10 @@ public class ${nombreClase}Servicio {
                   .join('\n                ')}
 
                 // Actualizar relaciones ManyToOne
-                ${manyToOne
-                  .map(
-                    (attr) =>
-                      `objetoExistente.set${
-                        attr.charAt(0).toUpperCase() + attr.slice(1)
-                      }(${nombreClase.toLowerCase()}.get${
-                        attr.charAt(0).toUpperCase() + attr.slice(1)
-                      }());`
-                  )
-                  .join('\n                ')}
-
                 // Actualizar relaciones OneToOne
-                ${oneToOne
-                  .map(
-                    (attr) =>
-                      `objetoExistente.set${
-                        attr.charAt(0).toUpperCase() + attr.slice(1)
-                      }(${nombreClase.toLowerCase()}.get${
-                        attr.charAt(0).toUpperCase() + attr.slice(1)
-                      }());`
-                  )
-                  .join('\n                ')}
-
                 // Actualizar relaciones ManyToMany
-                ${manyToMany
+                // Actualizar relaciones OneToMany
+                ${jpaClass.attrsEspeciales
                   .map(
                     (attr) =>
                       `objetoExistente.set${
@@ -1625,13 +1551,19 @@ public interface ${nombreClase}Repositorio extends JpaRepository<${nombreClase},
     return resultado ? resultado[1] : 'ClaseDesconocida';
   }
 
+  capitalizeFirstLetter(str: string): string {
+    if (!str) return str;
+    return str.charAt(0).toUpperCase() + str.slice(1);
+  }
+
   relacionesClaseJPA(
     elementoClase1: ElementoClase,
     link: ElementoLink,
     elementoClase2: ElementoClase,
     posicion: string,
-    bansClassOneToOne: ElementoClase[]
-  ): [string, ElementoClase[]] {
+    bansClassOneToOne: ElementoClase[],
+    atributosEspeciales: string[]
+  ): [string, ElementoClase[], string[]] {
     let respuesta: string = '';
     const cardinalidad: string =
       posicion === 'origen' ? link.atributos[0] : link.atributos[1];
@@ -1646,6 +1578,9 @@ public interface ${nombreClase}Repositorio extends JpaRepository<${nombreClase},
           elementoClase2.titulo
         } ${elementoClase2.titulo.toLowerCase()};`;
         bansClassOneToOne.push(elementoClase1);
+        atributosEspeciales.push(
+          this.capitalizeFirstLetter(elementoClase2.titulo.toLowerCase())
+        );
       } else {
         respuesta = `
         @OneToOne(mappedBy = "${elementoClase1.titulo.toLowerCase()}")
@@ -1653,8 +1588,11 @@ public interface ${nombreClase}Repositorio extends JpaRepository<${nombreClase},
           elementoClase2.titulo
         } ${elementoClase2.titulo.toLowerCase()};`;
         bansClassOneToOne.push(elementoClase2);
+        atributosEspeciales.push(
+          this.capitalizeFirstLetter(elementoClase2.titulo.toLowerCase())
+        );
       }
-      return [respuesta, bansClassOneToOne];
+      return [respuesta, bansClassOneToOne, atributosEspeciales];
     }
 
     if (cardinalidad == '0...1' || cardinalidad == '1...1') {
@@ -1664,7 +1602,10 @@ public interface ${nombreClase}Repositorio extends JpaRepository<${nombreClase},
         cardinalidad.includes('0') ? 'true' : 'false'
       })
       private ${elementoClase2.titulo} ${elementoClase2.titulo.toLowerCase()};`;
-      return [respuesta, bansClassOneToOne];
+      atributosEspeciales.push(
+        this.capitalizeFirstLetter(elementoClase2.titulo.toLowerCase())
+      );
+      return [respuesta, bansClassOneToOne, atributosEspeciales];
     }
 
     if (cardinalidad == '0...*' || cardinalidad == '1...*') {
@@ -1673,9 +1614,14 @@ public interface ${nombreClase}Repositorio extends JpaRepository<${nombreClase},
       private List<${elementoClase2.titulo}> ${pluralize(
         elementoClase2.titulo.toLowerCase()
       )};`;
-      return [respuesta, bansClassOneToOne];
+      atributosEspeciales.push(
+        this.capitalizeFirstLetter(
+          pluralize(elementoClase2.titulo.toLowerCase())
+        )
+      );
+      return [respuesta, bansClassOneToOne, atributosEspeciales];
     }
-    return [respuesta, bansClassOneToOne];
+    return [respuesta, bansClassOneToOne, atributosEspeciales];
   }
 
   parsearAtributo(atributo: string): AtributosSB {

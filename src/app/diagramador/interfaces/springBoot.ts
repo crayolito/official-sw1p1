@@ -7,3 +7,13 @@ export class AtributosSB {
     this.tipo = tipo;
   }
 }
+
+export class ClassJPA {
+  contenido: string;
+  attrsEspeciales: string[];
+
+  constructor(contenido: string, attrsEspeciales: string[]) {
+    this.contenido = contenido;
+    this.attrsEspeciales = attrsEspeciales;
+  }
+}

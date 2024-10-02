@@ -830,7 +830,7 @@ El proyecto se ejecutará en el puerto 8081, como se especifica en el archivo \`
           // Generar servicio
           carpetaServicios!.file(
             nombreClase + 'Servicio.java',
-            this.generarServicio(nombreClase,claseJPA)
+            this.generarServicio(nombreClase, claseJPA)
           );
 
           // Generar controlador
@@ -1366,7 +1366,16 @@ El proyecto se ejecutará en el puerto 8081, como se especifica en el archivo \`
           (line.includes('String') ||
             line.includes('Long') ||
             line.includes('int') ||
-            line.includes('boolean'))
+            line.includes('boolean'),
+          line.includes('LocalDate') ||
+            line.includes('BigDecimal') ||
+            line.includes('Date') ||
+            line.includes('Time') ||
+            line.includes('Timestamp') ||
+            line.includes('LocalDateTime') ||
+            line.includes('LocalTime') ||
+            line.includes('Double') ||
+            line.includes('Float'))
         ) {
           const parts = line.split(' ');
           const nombre = parts[2].replace(';', '');
@@ -1390,9 +1399,8 @@ El proyecto se ejecutará en el puerto 8081, como se especifica en el archivo \`
           const parts = line.split(' ');
           const nombre =
             parts
-              .find((part) => part.includes('List<'))
-              ?.replace('List<', '')
-              .replace('>', '')
+              .find((part) => part.includes('private'))
+              ?.split(' ')[2]
               .replace(';', '') || '';
           manyToOne.push(nombre);
         }
@@ -1402,9 +1410,8 @@ El proyecto se ejecutará en el puerto 8081, como se especifica en el archivo \`
           const parts = line.split(' ');
           const nombre =
             parts
-              .find((part) => part.includes('List<'))
-              ?.replace('List<', '')
-              .replace('>', '')
+              .find((part) => part.includes('private'))
+              ?.split(' ')[2]
               .replace(';', '') || '';
           oneToOne.push(nombre);
         }
@@ -1416,7 +1423,7 @@ El proyecto se ejecutará en el puerto 8081, como se especifica en el archivo \`
     const { simples, manyToMany, manyToOne, oneToOne } =
       parsearAtributos(jpaClass);
 
-      return `package com.nombreproyecto.proyecto.servicios;
+    return `package com.nombreproyecto.proyecto.servicios;
 
       import org.springframework.beans.factory.annotation.Autowired;
       import org.springframework.stereotype.Service;
@@ -1447,17 +1454,54 @@ El proyecto se ejecutará en el puerto 8081, como se especifica en el archivo \`
           public String actualizar(Long id, ${nombreClase} ${nombreClase.toLowerCase()}) {
               if (repositorio.existsById(id)) {
                   ${nombreClase} objetoExistente = repositorio.findById(id).orElse(null);
-                  // Actualizar atributos simples
-                  ${simples.map(attr => `objetoExistente.set${attr.charAt(0).toUpperCase() + attr.slice(1)}(${nombreClase.toLowerCase()}.get${attr.charAt(0).toUpperCase() + attr.slice(1)}());`).join('\n            ')}
 
-                  // Actualizar relaciones ManyToMany
-                  ${manyToMany.map(attr => `objetoExistente.set${attr.charAt(0).toUpperCase() + attr.slice(1)}(${nombreClase.toLowerCase()}.get${attr.charAt(0).toUpperCase() + attr.slice(1)}());`).join('\n            ')}
+                  // Actualizar atributos simples
+                  ${simples
+                    .map(
+                      (attr) =>
+                        `objetoExistente.set${
+                          attr.charAt(0).toUpperCase() + attr.slice(1)
+                        }(${nombreClase.toLowerCase()}.get${
+                          attr.charAt(0).toUpperCase() + attr.slice(1)
+                        }());`
+                    )
+                    .join('\n            ')}
 
                   // Actualizar relaciones ManyToOne
-                  ${manyToOne.map(attr => `objetoExistente.set${attr.charAt(0).toUpperCase() + attr.slice(1)}(${nombreClase.toLowerCase()}.get${attr.charAt(0).toUpperCase() + attr.slice(1)}());`).join('\n            ')}
+                  ${manyToOne
+                    .map(
+                      (attr) =>
+                        `objetoExistente.set${
+                          attr.charAt(0).toUpperCase() + attr.slice(1)
+                        }(${nombreClase.toLowerCase()}.get${
+                          attr.charAt(0).toUpperCase() + attr.slice(1)
+                        }());`
+                    )
+                    .join('\n            ')}
 
                   // Actualizar relaciones OneToOne
-                  ${oneToOne.map(attr => `objetoExistente.set${attr.charAt(0).toUpperCase() + attr.slice(1)}(${nombreClase.toLowerCase()}.get${attr.charAt(0).toUpperCase() + attr.slice(1)}());`).join('\n            ')}
+                  ${oneToOne
+                    .map(
+                      (attr) =>
+                        `objetoExistente.set${
+                          attr.charAt(0).toUpperCase() + attr.slice(1)
+                        }(${nombreClase.toLowerCase()}.get${
+                          attr.charAt(0).toUpperCase() + attr.slice(1)
+                        }());`
+                    )
+                    .join('\n            ')}
+
+                  // Actualizar relaciones ManyToMany
+                  ${manyToMany
+                    .map(
+                      (attr) =>
+                        `objetoExistente.set${
+                          attr.charAt(0).toUpperCase() + attr.slice(1)
+                        }(${nombreClase.toLowerCase()}.get${
+                          attr.charAt(0).toUpperCase() + attr.slice(1)
+                        }());`
+                    )
+                    .join('\n            ')}
 
                   repositorio.save(objetoExistente);
                   return "${nombreClase} actualizado con éxito.";

@@ -48,7 +48,7 @@ export const sampleGraphs = {
           "y": 10,
           "fontSize": 11,
           "fill": "#000000",
-          "text": "cliente",
+          "text": "Cliente",
           "fontFamily": "Averia Libre",
           "fontWeight": "Bold",
           "strokeWidth": 0
@@ -102,7 +102,7 @@ export const sampleGraphs = {
           "y": 10,
           "fontSize": 11,
           "fill": "#000000",
-          "text": "rutina",
+          "text": "Rutina",
           "fontFamily": "Averia Libre",
           "fontWeight": "Bold",
           "strokeWidth": 0
@@ -156,7 +156,7 @@ export const sampleGraphs = {
           "y": 10,
           "fontSize": 11,
           "fill": "#000000",
-          "text": "rutina_planEjercicio",
+          "text": "Rutina_Planejercicio",
           "fontFamily": "Averia Libre",
           "fontWeight": "Bold",
           "strokeWidth": 0
@@ -180,8 +180,8 @@ export const sampleGraphs = {
     {
       "type": "standard.HeaderedRectangle",
       "position": {
-        "x": 556,
-        "y": 181
+        "x": 560,
+        "y": 171
       },
       "size": {
         "width": 200,
@@ -210,7 +210,7 @@ export const sampleGraphs = {
           "y": 10,
           "fontSize": 11,
           "fill": "#000000",
-          "text": "planEjercicio",
+          "text": "Planejercicio",
           "fontFamily": "Averia Libre",
           "fontWeight": "Bold",
           "strokeWidth": 0
@@ -264,7 +264,7 @@ export const sampleGraphs = {
           "y": 10,
           "fontSize": 11,
           "fill": "#000000",
-          "text": "planAlimentacion",
+          "text": "PlanAlimentacion",
           "fontFamily": "Averia Libre",
           "fontWeight": "Bold",
           "strokeWidth": 0
@@ -318,7 +318,7 @@ export const sampleGraphs = {
           "y": 10,
           "fontSize": 11,
           "fill": "#000000",
-          "text": "planEjercicio_categoriaEjer",
+          "text": "Planejercicio_Categoriaejer",
           "fontFamily": "Averia Libre",
           "fontWeight": "Bold",
           "strokeWidth": 0
@@ -372,7 +372,7 @@ export const sampleGraphs = {
           "y": 10,
           "fontSize": 11,
           "fill": "#000000",
-          "text": "categoriaEjer",
+          "text": "Categoriaejer",
           "fontFamily": "Averia Libre",
           "fontWeight": "Bold",
           "strokeWidth": 0
@@ -584,7 +584,7 @@ export const sampleGraphs = {
           "y": 10,
           "fontSize": 11,
           "fill": "#000000",
-          "text": "A",
+          "text": "Aclass",
           "fontFamily": "Averia Libre",
           "fontWeight": "Bold",
           "strokeWidth": 0
@@ -638,7 +638,7 @@ export const sampleGraphs = {
           "y": 10,
           "fontSize": 11,
           "fill": "#000000",
-          "text": "B",
+          "text": "Bclass",
           "fontFamily": "Averia Libre",
           "fontWeight": "Bold",
           "strokeWidth": 0
@@ -692,7 +692,7 @@ export const sampleGraphs = {
           "y": 10,
           "fontSize": 11,
           "fill": "#000000",
-          "text": "C",
+          "text": "Cclass",
           "fontFamily": "Averia Libre",
           "fontWeight": "Bold",
           "strokeWidth": 0
@@ -906,7 +906,7 @@ export const sampleGraphs = {
           "y": 10,
           "fontSize": 11,
           "fill": "#000000",
-          "text": "D",
+          "text": "Dclass",
           "fontFamily": "Averia Libre",
           "fontWeight": "Bold",
           "strokeWidth": 0

@@ -627,9 +627,9 @@ import java.util.List;
 @Entity
 @Table (name = "${elementoClase.titulo.toLocaleLowerCase()}")
 public class ${elementoClase.titulo} implements Serializable {
-      @Id
-      @GeneratedValue(strategy = GenerationType.SEQUENCE)
-      ${atributosJPA}
+@Id
+@GeneratedValue(strategy = GenerationType.SEQUENCE)
+${atributosJPA}
 `;
 
           for (let elementoLink of elementosLinks) {
@@ -645,14 +645,12 @@ public class ${elementoClase.titulo} implements Serializable {
               elementoLink.destino.id == elementoClase.id
             ) {
               jpaClase += `
-                @ManyToOne
-                @JoinColumn(name = "id_padre_${elementoClase.titulo.toLowerCase()}")
-                private ${
-                  elementoClase.titulo
-                } ${elementoClase.titulo.toLowerCase()}Padre;
+@ManyToOne
+@JoinColumn(name = "id_padre_${elementoClase.titulo.toLowerCase()}")
+private ${elementoClase.titulo} ${elementoClase.titulo.toLowerCase()}Padre;
 
-                @OneToMany(mappedBy = "${elementoClase.titulo.toLowerCase()}Padre", cascade = CascadeType.ALL)
-                private List<${elementoClase.titulo}> sub${pluralize(
+@OneToMany(mappedBy = "${elementoClase.titulo.toLowerCase()}Padre", cascade = CascadeType.ALL)
+private List<${elementoClase.titulo}> sub${pluralize(
                 elementoClase.titulo.toLowerCase()
               )};
               `;
@@ -687,24 +685,18 @@ public class ${elementoClase.titulo} implements Serializable {
                 elementoLink.atributos[0].includes('*...0')
               ) {
                 jpaClase += `
-                  @ManyToMany
-                  @JoinTable(
-                    name = "${claseOxClaseI[1].titulo.toLowerCase()}",
-                    joinColumns = @JoinColumn(name = "id_${claseOxClaseI[0].titulo.toLowerCase()}"),
-                    inverseJoinColumns = @JoinColumn(name = "id_${claseF.titulo.toLowerCase()}")
-                  )
-                  private List<${claseF.titulo}> ${pluralize(
-                  claseF.titulo.toLowerCase()
-                )};
+@ManyToMany
+@JoinTable(
+name = "${claseOxClaseI[1].titulo.toLowerCase()}",
+joinColumns = @JoinColumn(name = "id_${claseOxClaseI[0].titulo.toLowerCase()}"),
+inverseJoinColumns = @JoinColumn(name = "id_${claseF.titulo.toLowerCase()}")
+)
+private List<${claseF.titulo}> ${pluralize(claseF.titulo.toLowerCase())};
                 `;
               } else {
                 jpaClase += `
-                  @ManyToMany(mappedBy = "${pluralize(
-                    claseOxClaseI[0].titulo.toLowerCase()
-                  )}")
-                  private List<${claseF.titulo}> ${pluralize(
-                  claseF.titulo.toLowerCase()
-                )};
+@ManyToMany(mappedBy = "${pluralize(claseOxClaseI[0].titulo.toLowerCase())}")
+private List<${claseF.titulo}> ${pluralize(claseF.titulo.toLowerCase())};
                 `;
               }
             } else {

@@ -16,6 +16,7 @@ import { saveAs } from 'file-saver';
 import JSZip from 'jszip';
 import pluralize from 'pluralize';
 import { v4 as uuidv4 } from 'uuid';
+import { DOMParser } from 'xmldom';
 import { environment } from '../../../environments/environment';
 import {
   AtributoClase,
@@ -24,7 +25,11 @@ import {
   ElementoClase,
   ElementoLink,
 } from '../interfaces/jsonJoint.interface';
-import { AtributosSB, ClassJPA } from '../interfaces/springBoot';
+import {
+  AtributosSB,
+  ClassJPA,
+  TicketOneToOne,
+} from '../interfaces/springBoot';
 import * as appShapes from '../shapes/app-shapes';
 import { HaloService } from './halo.service';
 import { InspectorService } from './inspector.service';
@@ -462,6 +467,8 @@ class KitchenSinkService {
         return 'AGREGACION';
       case 'M 0 -10 -15 0 0 10 z':
         return 'HERENCIA';
+      case 'M 0 -10 L 2.94 -3.09 L 9.51 -3.09 L 4.29 1.18 L 6.18 8.09 L 0 5 L -6.18 8.09 L -4.29 1.18 L -9.51 -3.09 L -2.94 -3.09 Z':
+        return 'DEPENDENCIA';
       default:
         return 'ASOCIACION';
     }
@@ -547,6 +554,377 @@ class KitchenSinkService {
     this.toolbarService.create(this.commandManager, this.paperScroller);
 
     this.toolbarService.toolbar.on({
+      'xmlExportar:pointerclick': () => {
+        const entrada = document.createElement('input');
+        entrada.type = 'file';
+        entrada.accept = '.xml';
+        entrada.onchange = (event: any) => {
+          const archivo = event.target.files[0];
+          if (archivo) {
+            const lector = new FileReader();
+            lector.onload = (e) => {
+              try {
+                const xmlContent = e.target!.result as string;
+
+                // Parsear el contenido del XML
+                const parser = new DOMParser();
+                const xmlDoc = parser.parseFromString(
+                  xmlContent,
+                  'application/xml'
+                );
+
+                // LOGIC : ACCEDER <element> con xmi:type="uml:Class"
+                // LOGIC : ACCEDER <element> aqui van los datos de coordenadas en el papel
+                const packagedElements = xmlDoc.getElementsByTagName('element');
+                let clasesJoint: Element[] = [];
+                let dataClasesJoint: Element[] = [];
+
+                for (let i = 0; i < packagedElements.length; i++) {
+                  const element = packagedElements[i];
+                  // Verificar si el atributo 'xmi:idref' existe
+                  if (element.hasAttribute('xmi:idref')) {
+                    clasesJoint.push(element);
+                  }
+                  // Verificar si el atributo 'geometry' existe
+                  if (element.hasAttribute('geometry')) {
+                    dataClasesJoint.push(element);
+                  }
+                }
+
+                function getGeometryValues(id: string): string[] {
+                  for (let i = 0; i < dataClasesJoint.length; i++) {
+                    const element = dataClasesJoint[i];
+                    const subject = element.getAttribute('subject');
+
+                    if (subject == id) {
+                      const geometry = element.getAttribute('geometry');
+                      if (geometry) {
+                        // Extraer los valores numéricos de geometry
+                        const values = geometry.match(/\d+/g);
+                        if (values) {
+                          return values;
+                        }
+                      }
+                    }
+                  }
+                  return [];
+                }
+
+                // LOGIC : ACCEDER <connector>
+                const connectors = xmlDoc.getElementsByTagName('connector');
+
+                let clasesJsonToJoint: string[] = [];
+                // READ : CREAR LAS Clases Normales e intermedias
+                clasesJoint.forEach((element, index) => {
+                  const id = element.getAttribute('xmi:idref');
+                  const nombre = element.getAttribute('name');
+                  let color = nombre?.includes('_') ? '#feb663' : '#31d0c6';
+                  let coordenadas: string[] = getGeometryValues(id!);
+
+                  // LOGIC: Lista para almacenar los resultados
+                  let attributeList = '';
+                  const attributes = element.getElementsByTagName('attribute');
+                  for (let j = 0; j < attributes.length; j++) {
+                    const attribute = attributes[j];
+                    const name = attribute.getAttribute('name');
+                    const properties =
+                      attribute.getElementsByTagName('properties')[0];
+                    const type = properties
+                      ? properties.getAttribute('type')
+                      : '';
+                    if (name && type) {
+                      attributeList += `-${name}:${type}\\n`;
+                    }
+                  }
+
+                  clasesJsonToJoint.push(`
+          {
+    "type": "standard.HeaderedRectangle",
+    "position": {
+      "x": ${coordenadas[0]},
+      "y": ${coordenadas[1]}
+    },
+    "size": {
+      "width": 200,
+      "height": 100
+    },
+    "angle": 0,
+    "id": "${id}",
+    "z": 1,
+    "attrs": {
+      "root": {
+        "dataTooltipPosition": "left",
+        "dataTooltipPositionSelector": ".joint-stencil"
+      },
+      "body": {
+        "stroke": "${color}",
+        "fill": "transparent",
+        "strokeDasharray": "0"
+      },
+      "header": {
+        "height": 20,
+        "stroke": "${color}",
+        "fill": "${color}",
+        "strokeDasharray": "0"
+      },
+      "headerText": {
+        "y": 10,
+        "fontSize": 11,
+        "fill": "#000000",
+        "text": "Cliente",
+        "fontFamily": "Averia Libre",
+        "fontWeight": "Bold",
+        "strokeWidth": 0
+      },
+      "bodyText": {
+        "y": "calc(h/2 + 10)",
+        "fontSize": 11,
+        "fill": "#FFFFFF",
+        "textWrap": {
+          "text": "${attributeList}",
+          "width": -10,
+          "height": -20,
+          "ellipsis": true
+        },
+        "fontFamily": "Averia Libre",
+        "fontWeight": "Bold",
+        "strokeWidth": 0
+      }
+    }
+  }`);
+                });
+
+                let linksJsonToJoint: string[] = [];
+                for (let i = 0; i < connectors.length; i++) {
+                  const connector = connectors[i];
+                  let sourceId = '';
+                  let sourceMultiplicity = '';
+                  let targetMultiplicity = '';
+                  let targetId = '';
+                  let eaType = '';
+                  let subtype = '';
+                  let intermediaId = '';
+                  // Obtener el atributo xmi:idref del connector
+                  const connectorId = connector.getAttribute('xmi:idref');
+                  console.log('Connector ID:', connectorId);
+
+                  // Obtener el elemento source y su atributo xmi:idref
+                  const source = connector.getElementsByTagName('source')[0];
+                  if (source) {
+                    sourceId = source.getAttribute('xmi:idref')!;
+                    console.log('Source ID:', sourceId);
+
+                    // Obtener el elemento type dentro de source y su atributo multiplicity
+                    const sourceType = source.getElementsByTagName('type')[0];
+                    if (sourceType) {
+                      sourceMultiplicity =
+                        sourceType.getAttribute('multiplicity')!;
+                      console.log('Source Multiplicity:', sourceMultiplicity);
+                    }
+                  }
+
+                  // Obtener el elemento target y su atributo xmi:idref
+                  const target = connector.getElementsByTagName('target')[0];
+                  if (target) {
+                    targetId = target.getAttribute('xmi:idref')!;
+                    console.log('Target ID:', targetId);
+
+                    // Obtener el elemento type dentro de target y su atributo multiplicity
+                    const targetType = target.getElementsByTagName('type')[0];
+                    if (targetType) {
+                      targetMultiplicity =
+                        targetType.getAttribute('multiplicity')!;
+                      console.log('Target Multiplicity:', targetMultiplicity);
+                    }
+                  }
+
+                  // Obtener el elemento properties y su atributo ea_type
+                  const properties =
+                    connector.getElementsByTagName('properties')[0];
+                  if (properties) {
+                    eaType = properties.getAttribute('ea_type')!;
+                    subtype = properties.getAttribute('subtype') ?? '';
+                  }
+
+                  const extendedProperties =
+                    connector.getElementsByTagName('extendedProperties')[0];
+                  if (extendedProperties) {
+                    intermediaId =
+                      extendedProperties.getAttribute('associationclass') ?? '';
+                  }
+                  const uuid1 = uuidv4();
+                  const uuid2 = uuidv4();
+                  if (
+                    sourceMultiplicity.includes('*') &&
+                    targetMultiplicity.includes('*')
+                  ) {
+                    linksJsonToJoint.push(`
+                      {
+      "type": "app.Link",
+      "router": {
+        "name": "normal"
+      },
+      "connector": {
+        "name": "rounded"
+      },
+      "labels": [
+        {
+          "attrs": {
+            "text": {
+              "text": "${sourceMultiplicity}",
+              "fill": null
+            }
+          }
+        }
+      ],
+      "source": {
+        "id": "${sourceId}"
+      },
+      "target": {
+        "id": "${intermediaId}"
+      },
+      "id": "${uuid1}",
+      "z": 12,
+      "attrs": {}
+    }`);
+
+                    linksJsonToJoint.push(`
+      {
+"type": "app.Link",
+"router": {
+"name": "normal"
+},
+"connector": {
+"name": "rounded"
+},
+"labels": [
+{
+"attrs": {
+"text": {
+"text": "${targetMultiplicity}",
+"fill": null
+}
+}
+}
+],
+"source": {
+"id": "${targetId}"
+},
+"target": {
+"id": "${intermediaId}"
+},
+"id": "${uuid2}",
+"z": 12,
+"attrs": {}
+}`);
+                  } else {
+                    let d: string = '';
+                    if (eaType == 'Association' && subtype == '') {
+                      d = this.tipoCabeceraInversa('ASOCIACION');
+                    }
+                    if (eaType == 'Generalization' && subtype == '') {
+                      d = this.tipoCabeceraInversa('HERENCIA');
+                    }
+                    if (eaType == 'Aggregation' && subtype == 'Strong') {
+                      d = this.tipoCabeceraInversa('COMPOSICION');
+                    }
+                    if (eaType == 'Aggregation' && subtype == 'Weak') {
+                      d = this.tipoCabeceraInversa('AGREGACION');
+                    }
+                    if (eaType == 'Dependency' && subtype == '') {
+                      d = this.tipoCabeceraInversa('DEPENDENCIA');
+                    }
+
+                    linksJsonToJoint.push(`
+     {
+"type": "app.Link",
+"router": {
+"name": "normal"
+},
+"connector": {
+"name": "rounded"
+},
+"labels": [
+${
+  sourceMultiplicity
+    ? `
+{
+"attrs": {
+"text": {
+"text": "${sourceMultiplicity}",
+"fill": null
+}
+},
+"position": {
+"distance": 0.2,
+"offset": 0,
+"angle": 0
+}
+},
+`
+    : ''
+}
+${
+  targetMultiplicity
+    ? `
+{
+"attrs": {
+"text": {
+"text": "${targetMultiplicity}",
+"fill": null
+}
+},
+"position": {
+"distance": 0.8,
+"offset": 0,
+"angle": 0
+}
+}
+`
+    : ''
+}
+],
+"source": {
+"id": "${sourceId}"
+},
+"target": {
+"id": "${targetId}"
+},
+"id": "${connectorId}",
+"z": 17,
+"vertices": [],
+"attrs": {
+"line": {
+"targetMarker": {
+"d": "${d}",
+"fill": "#feb663"
+}
+}
+}
+}`);
+                  }
+                }
+
+                // READ : GENERAR EL JSON
+                const jsonJoint = `
+                  {
+                    "cells": [
+                      ${clasesJsonToJoint.join(',')},
+                      ${linksJsonToJoint.join(',')}
+                    ]
+                  }
+                `;
+                console.log(jsonJoint);
+                this.graph.fromJSON(JSON.parse(jsonJoint));
+              } catch (error) {
+                console.error('Error al leer el archivo XML:', error);
+              }
+            };
+            lector.readAsText(archivo);
+          }
+        };
+        entrada.click();
+      },
       'qr:pointerclick': () => {
         this.viewModalQR = !this.viewModalQR;
       },
@@ -557,7 +935,7 @@ class KitchenSinkService {
         const jsonJoint = this.graph.toJSON();
         let elementosClases: ElementoClase[] = [];
         let elementosLinks: ElementoLink[] = [];
-        let bansClassOneToOne: ElementoClase[] = [];
+        let ticketsOneToOne: TicketOneToOne[] = [];
         jsonJoint.cells.forEach((cell: any) => {
           if (cell.type == 'standard.HeaderedRectangle') {
             let elementoClase: ElementoClase = {
@@ -655,6 +1033,16 @@ private List<${elementoClase.titulo}> sub${pluralize(
                 elementoClase.titulo.toLowerCase()
               )};
               `;
+              atributosEspeciales.push(
+                this.capitalizeFirstLetter(
+                  `${elementoClase.titulo.toLowerCase()}Padre`
+                )
+              );
+              atributosEspeciales.push(
+                this.capitalizeFirstLetter(
+                  `sub${pluralize(elementoClase.titulo.toLowerCase())}`
+                )
+              );
               continue;
             }
 
@@ -723,18 +1111,18 @@ private List<${claseF.titulo}> ${pluralize(claseF.titulo.toLowerCase())};
                   elementosClases
                 );
                 // LOGIC : HACER RELACION DE CLASES A JPA
-                const [relacionesJPA, bans, attrEspeciales] =
+                const [relacionesJPA, tickes, attrEspeciales] =
                   this.relacionesClaseJPA(
                     elementoClase,
                     elementoLink,
                     claseTrabajo,
                     'origen',
-                    bansClassOneToOne,
+                    ticketsOneToOne,
                     atributosEspeciales
                   );
                 atributosEspeciales = attrEspeciales;
                 relacionesClaseJPA = relacionesJPA;
-                bansClassOneToOne = bans;
+                ticketsOneToOne = tickes;
                 jpaClase += relacionesClaseJPA;
               } else {
                 // LOGIC : Verificar si esta unida al final
@@ -743,18 +1131,18 @@ private List<${claseF.titulo}> ${pluralize(claseF.titulo.toLowerCase())};
                   elementoLink,
                   elementosClases
                 );
-                const [relacionesJPA, bans, attrEspeciales] =
+                const [relacionesJPA, tickes, attrEspeciales] =
                   this.relacionesClaseJPA(
                     elementoClase,
                     elementoLink,
                     claseTrabajo,
                     'destino',
-                    bansClassOneToOne,
+                    ticketsOneToOne,
                     atributosEspeciales
                   );
                 atributosEspeciales = attrEspeciales;
                 relacionesClaseJPA = relacionesJPA;
-                bansClassOneToOne = bans;
+                ticketsOneToOne = tickes;
                 jpaClase += relacionesClaseJPA;
               }
             }
@@ -826,35 +1214,29 @@ El proyecto se ejecutará en el puerto 8081, como se especifica en el archivo \`
 `;
 
         zip.file('README.md', contenidoREADME);
-        zip.file('README.md', contenidoREADME);
 
         clasesJPA.forEach((claseJPA) => {
           const nombreClase = this.extraerNombreClase(claseJPA.contenido);
           const nombreArchivo = nombreClase + '.java';
 
-          // Generar modelo
           carpetaModelos!.file(nombreArchivo, claseJPA.contenido);
 
-          // Generar repositorio
           carpetaRepositorios!.file(
             nombreClase + 'Repositorio.java',
             this.generarRepositorio(nombreClase)
           );
 
-          // Generar servicio
           carpetaServicios!.file(
             nombreClase + 'Servicio.java',
             this.generarServicio(nombreClase, claseJPA)
           );
 
-          // Generar controlador
           carpetaControladores!.file(
             nombreClase + 'Controlador.java',
             this.generarControlador(nombreClase)
           );
         });
 
-        // Generar archivo ZIP
         zip.generateAsync({ type: 'blob' }).then((content) => {
           saveAs(content, 'complemento.zip');
         });
@@ -1161,6 +1543,39 @@ El proyecto se ejecutará en el puerto 8081, como se especifica en el archivo \`
                 intermedia: '',
               });
             }
+
+            if (elementoLink.destino.normal == 'DEPENDENCIA') {
+              console.log('entro a generar un connector con dependencia');
+              connectors += `
+                <connector xmi:idref="${elementoLink.id}">
+                  <source xmi:idref="${elementoLink.origen.id}">
+                    <type multiplicity="${
+                      elementoLink.atributos[0] ?? ''
+                    }" aggregation="none" containment="Unspecified" />
+                  </source>
+                  <target  xmi:idref="${elementoLink.destino.id}">
+                    <type multiplicity="${
+                      elementoLink.atributos[1] ?? ''
+                    }" aggregation="none" containment="Unspecified" />
+                  </target>
+                  <properties ea_type="Dependency" direction="Source -&gt; Destination"/>
+                  <labels lb="${elementoLink.atributos[0] ?? ''}" rb="${
+                elementoLink.atributos[1] ?? ''
+              }"/>
+                  <extendedProperties />
+                </connector>
+              `;
+
+              connectorsXML.push({
+                id: elementoLink.id,
+                origen: elementoLink.origen.id,
+                destino: elementoLink.destino.id,
+                destinoType: 'none',
+                properties: 'Dependency',
+                intermedia: '',
+              });
+            }
+
             diagramElement.push(elementoLink.id);
           }
         }
@@ -1229,6 +1644,19 @@ El proyecto se ejecutará en el puerto 8081, como se especifica en el archivo \`
             ) {
               elements += `
             <Aggregation xmi:id="${connector.id}"
+						start="${connector.origen}" end="${connector.destino}" />
+              `;
+            }
+
+            if (
+              elementoClase.id == connector.destino &&
+              connector.properties == 'Dependency' &&
+              connector.destinoType == 'none' &&
+              connector.intermedia == ''
+            ) {
+              console.log('entro crear link en elmentos para dependecia');
+              elements += `
+            <Dependency xmi:id="${connector.id}"
 						start="${connector.origen}" end="${connector.destino}" />
               `;
             }
@@ -1355,11 +1783,24 @@ El proyecto se ejecutará en el puerto 8081, como se especifica en el archivo \`
         // Liberar el objeto URL
         URL.revokeObjectURL(link.href);
       },
-      'xmlExportar:pointerclick': () => {},
+
       'grid-size:change': this.paper.setGridSize.bind(this.paper),
     });
 
     this.renderPlugin('.toolbar-container', this.toolbarService.toolbar);
+  }
+
+  tipoCabeceraInversa(descripcion: string): string {
+    const mapaInverso: { [key: string]: string } = {
+      ASOCIACION: 'M 0 0 0 0',
+      COMPOSICION: 'M -10 0 0 10 10 0 0 -10 z',
+      AGREGACION: 'M 0 -10 15 0 0 10 z',
+      HERENCIA: 'M 0 -10 -15 0 0 10 z',
+      DEPENDENCIA:
+        'M 0 -10 L 2.94 -3.09 L 9.51 -3.09 L 4.29 1.18 L 6.18 8.09 L 0 5 L -6.18 8.09 L -4.29 1.18 L -9.51 -3.09 L -2.94 -3.09 Z',
+    };
+
+    return mapaInverso[descripcion] || 'M 0 0 0 0';
   }
 
   generarServicio(nombreClase: string, jpaClass: ClassJPA): string {
@@ -1577,41 +2018,125 @@ public interface ${nombreClase}Repositorio extends JpaRepository<${nombreClase},
     link: ElementoLink,
     elementoClase2: ElementoClase,
     posicion: string,
-    bansClassOneToOne: ElementoClase[],
+    ticketsOneToOne: TicketOneToOne[],
     atributosEspeciales: string[]
-  ): [string, ElementoClase[], string[]] {
+  ): [string, TicketOneToOne[], string[]] {
     let respuesta: string = '';
     const cardinalidad: string =
-      posicion === 'origen' ? link.atributos[0] : link.atributos[1];
+      posicion == 'origen' ? link.atributos[1] : link.atributos[0];
 
-    // LOGIC : DEBE CUMPLIR ESTA CARDINALIDAD PARA OneToOne
-    if (link.atributos[0] == '1...1' && link.atributos[1] == '1...1') {
-      if (bansClassOneToOne.includes(elementoClase1)) {
-        respuesta = `
-        @OneToOne(cascade = CascadeType.ALL)
-        @JoinColumn(name = "id_${elementoClase2.titulo.toLowerCase()}",referencedColumnName = "id" )
-        private ${
-          elementoClase2.titulo
-        } ${elementoClase2.titulo.toLowerCase()};`;
-        bansClassOneToOne.push(elementoClase1);
-        atributosEspeciales.push(
-          this.capitalizeFirstLetter(elementoClase2.titulo.toLowerCase())
-        );
+    if (
+      (link.atributos[0] == '0...1' && link.atributos[1] == '0...1') ||
+      (link.atributos[0] == '1...1' && link.atributos[1] == '1...1') ||
+      (link.atributos[0] == '0...1' && link.atributos[1] == '1...1') ||
+      (link.atributos[0] == '1...1' && link.atributos[1] == '0...1')
+    ) {
+      // LOGIC : DEBE CUMPLIR ESTA CARDINALIDAD PARA OneToOne
+      // LOGIC : VERIFICA SI SE ENCUENTRA O EXISTE
+      if (!ticketsOneToOne.some((ticket) => ticket.linkOneToOne == link)) {
+        if (link.origen.id == elementoClase1.id) {
+          // LOGIC : CUANDO LA CLASE JPA CONTRUCCION ESTA EN EL ORIGEN
+          let cardinalidaBase: string = link.atributos[1];
+          respuesta = `
+          @OneToOne(cascade = CascadeType.ALL)
+          @JoinColumn(name = "id_${elementoClase2.titulo.toLowerCase()}", nullable = ${
+            cardinalidaBase.includes('0') ? 'true' : 'false'
+          })
+          private ${
+            elementoClase2.titulo
+          } ${elementoClase2.titulo.toLowerCase()};`;
+          let ticketOneToOne: TicketOneToOne = {
+            linkOneToOne: link,
+            origenStatus: 1,
+            destinoStatus: 0,
+          };
+          ticketsOneToOne.push(ticketOneToOne);
+          atributosEspeciales.push(
+            this.capitalizeFirstLetter(elementoClase2.titulo.toLowerCase())
+          );
+          return [respuesta, ticketsOneToOne, atributosEspeciales];
+        } else {
+          // LOGIC : CUANDO LA CLASE JPA CONTRUCCION ESTA EN EL DESTINO
+          let cardinalidaBase: string = link.atributos[0];
+          respuesta = `
+          @OneToOne(mappedBy = "${elementoClase1.titulo.toLowerCase()}" ${
+            cardinalidaBase.includes('0') ? ', optional = true' : ''
+          })
+          private ${
+            elementoClase2.titulo
+          } ${elementoClase2.titulo.toLowerCase()};`;
+          let ticketOneToOne: TicketOneToOne = {
+            linkOneToOne: link,
+            origenStatus: 0,
+            destinoStatus: 1,
+          };
+          ticketsOneToOne.push(ticketOneToOne);
+          atributosEspeciales.push(
+            this.capitalizeFirstLetter(elementoClase2.titulo.toLowerCase())
+          );
+          return [respuesta, ticketsOneToOne, atributosEspeciales];
+        }
       } else {
-        respuesta = `
-        @OneToOne(mappedBy = "${elementoClase1.titulo.toLowerCase()}")
-        private ${
-          elementoClase2.titulo
-        } ${elementoClase2.titulo.toLowerCase()};`;
-        bansClassOneToOne.push(elementoClase2);
-        atributosEspeciales.push(
-          this.capitalizeFirstLetter(elementoClase2.titulo.toLowerCase())
+        // LOGIC : PRIMERO VA VERIFICAR SI TICKET ES VALIDO PARA OneToOne VERIFICA SI CUMPLIO SU CICLO
+        let ticketTrabajo: TicketOneToOne = ticketsOneToOne.find(
+          (ticket) => ticket.linkOneToOne == link
+        )!;
+        let index = ticketsOneToOne.findIndex(
+          (ticket) => ticket.linkOneToOne == link
         );
+        if (
+          ticketTrabajo.origenStatus == 1 &&
+          ticketTrabajo.destinoStatus == 1
+        ) {
+          return [respuesta, ticketsOneToOne, atributosEspeciales];
+        }
+
+        // LOGIC : SI ESTA EN LA LISTA PERO FALTA TRABAJARLO
+        if (ticketTrabajo.linkOneToOne.origen.id == elementoClase1.id) {
+          let cardinalidaBase: string = link.atributos[1];
+          respuesta = `
+          @OneToOne(cascade = CascadeType.ALL)
+          @JoinColumn(name = "id_${elementoClase2.titulo.toLowerCase()}", nullable = ${
+            cardinalidaBase.includes('0') ? 'true' : 'false'
+          })
+          private ${
+            elementoClase2.titulo
+          } ${elementoClase2.titulo.toLowerCase()};`;
+          ticketsOneToOne[index] = {
+            ...ticketsOneToOne[index],
+            origenStatus: 1,
+          };
+          atributosEspeciales.push(
+            this.capitalizeFirstLetter(elementoClase2.titulo.toLowerCase())
+          );
+          return [respuesta, ticketsOneToOne, atributosEspeciales];
+        } else {
+          let cardinalidaBase: string = link.atributos[0];
+          // LOGIC : CUANDO LA CLASE JPA CONTRUCCION ESTA EN EL DESTINO
+          respuesta = `
+          @OneToOne(mappedBy = "${elementoClase1.titulo.toLowerCase()}" ${
+            cardinalidaBase.includes('0') ? ', optional = true' : ''
+          })
+          private ${
+            elementoClase2.titulo
+          } ${elementoClase2.titulo.toLowerCase()};`;
+          ticketsOneToOne[index] = {
+            ...ticketsOneToOne[index],
+            destinoStatus: 1,
+          };
+          atributosEspeciales.push(
+            this.capitalizeFirstLetter(elementoClase2.titulo.toLowerCase())
+          );
+          return [respuesta, ticketsOneToOne, atributosEspeciales];
+        }
       }
-      return [respuesta, bansClassOneToOne, atributosEspeciales];
     }
 
-    if (cardinalidad == '0...1' || cardinalidad == '1...1') {
+    if (
+      cardinalidad == '0...1' ||
+      cardinalidad == '1...1' ||
+      cardinalidad == '1...0'
+    ) {
       respuesta = `
       @ManyToOne
       @JoinColumn(name = "id_${elementoClase2.titulo.toLowerCase()}", nullable = ${
@@ -1621,10 +2146,15 @@ public interface ${nombreClase}Repositorio extends JpaRepository<${nombreClase},
       atributosEspeciales.push(
         this.capitalizeFirstLetter(elementoClase2.titulo.toLowerCase())
       );
-      return [respuesta, bansClassOneToOne, atributosEspeciales];
+      return [respuesta, ticketsOneToOne, atributosEspeciales];
     }
 
-    if (cardinalidad == '0...*' || cardinalidad == '1...*') {
+    if (
+      cardinalidad == '0...*' ||
+      cardinalidad == '1...*' ||
+      cardinalidad == '*...0' ||
+      cardinalidad == '*...1'
+    ) {
       respuesta = `
       @OneToMany(mappedBy = "${elementoClase1.titulo.toLowerCase()}")
       private List<${elementoClase2.titulo}> ${pluralize(
@@ -1635,9 +2165,9 @@ public interface ${nombreClase}Repositorio extends JpaRepository<${nombreClase},
           pluralize(elementoClase2.titulo.toLowerCase())
         )
       );
-      return [respuesta, bansClassOneToOne, atributosEspeciales];
+      return [respuesta, ticketsOneToOne, atributosEspeciales];
     }
-    return [respuesta, bansClassOneToOne, atributosEspeciales];
+    return [respuesta, ticketsOneToOne, atributosEspeciales];
   }
 
   parsearAtributo(atributo: string): AtributosSB {

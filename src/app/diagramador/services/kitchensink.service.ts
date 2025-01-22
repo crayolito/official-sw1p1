@@ -607,7 +607,7 @@ class KitchenSinkService {
                       }
                     }
                   }
-                  return [];
+                  return ['0', '0'];
                 }
 
                 // LOGIC : ACCEDER <connector>

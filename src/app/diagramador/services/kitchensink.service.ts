@@ -1001,6 +1001,9 @@ import jakarta.persistence.*;
 import lombok.Data;
 import java.io.Serializable;
 import java.util.List;
+import java.math.BigDecimal;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
 
 @Data
 @Entity
